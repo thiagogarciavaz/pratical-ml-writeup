@@ -72,9 +72,10 @@ fitControlGBM <- trainControl(method = "cv", number = 5, allowParallel = TRUE, v
 - Selection: 
 We're going to train the model with random forests and GBM to compare performance between them.
 
-```{r}
-modRF <- train(classe ~ ., data=modelTraining, method = "rf", trControl = fitControlRF)
-modGBM <- train(classe ~ ., data=modelTraining, method = "gbm", trControl = fitControlGBM)
+```{r, message=FALSE, warning=FALSE, comment=NA}
+modelTraining <- modelTesting
+modRF <- train(classe ~ ., data=modelTraining, method = "rf", trControl = fitControlRF, verbose = FALSE)
+modGBM <- train(classe ~ ., data=modelTraining, method = "gbm", trControl = fitControlGBM, verbose = FALSE)
 ```
 
 ## Results & Performance
