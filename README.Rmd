@@ -1,0 +1,105 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Thiago Vaz"
+date: "2017, January 17th"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+```
+
+## Executive Summary
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+## Project Goal
+In this project, the goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes. Participants were supervised by an experienced weight lifter to make sure the execution complied to the manner they were supposed to simulate. The exercises were performed by six male participants aged between 20-28 years, with little weight lifting experience.
+
+
+## Explanatory Data Analysis
+First thing to do is load the training dataset and explore variables, sizes and data quality.
+
+```{r}
+setwd("C:/Projetos/Coursera/DataScience/pratical-ml")
+training <- read.csv("pml-training.csv", header = TRUE, na.strings=c("NA", "#DIV/0!"))
+testing <- read.csv("pml-testing.csv", header = TRUE, na.strings=c("NA", "#DIV/0!"))
+dim(training)
+dim(testing)
+plot(training$classe)
+summary(training$classe)
+```
+
+## Data Cleaning
+Looking for the dataset, first 7 variables are related to the user (and unnecessary for the project).
+
+```{r echo=FALSE}
+names(training)[1:7]
+```
+
+Another important issue is to remove NA features that might contain noise for the purpose of the study.
+
+The final model contains 19622 obs. of 52 features and 1 result.
+```{r}
+cleanTraining <- training[, -c(1:7)]
+cleanTraining <- Filter(function(x)!any(is.na(x)), cleanTraining)
+dim(cleanTraining)
+```
+
+## Model
+
+- Partition
+We will split the cleaned training dataset into two portions to validate the results of different models.
+The ratio we're going to use are: 80/20.
+
+```{r}
+
+inTrain <- createDataPartition(y=cleanTraining$classe, p=0.8, list=FALSE)
+modelTraining <- cleanTraining[inTrain, ]
+modelTesting <- cleanTraining[-inTrain, ]
+```
+
+- Cross-Validation
+The models are going to be generated using a cross-validation at a 5-fold.
+
+```{r}
+set.seed(20170114)
+fitControlRF <- trainControl(method = "cv", number = 5, allowParallel = TRUE, verbose = FALSE)
+fitControlGBM <- trainControl(method = "cv", number = 5, allowParallel = TRUE, verbose = FALSE)
+```
+
+- Selection: 
+We're going to train the model with random forests and GBM to compare performance between them.
+
+```{r}
+modRF <- train(classe ~ ., data=modelTraining, method = "rf", trControl = fitControlRF)
+modGBM <- train(classe ~ ., data=modelTraining, method = "gbm", trControl = fitControlGBM)
+```
+
+## Results & Performance
+
+```{r}
+predRF <- predict(modRF, modelTesting)
+cmRF <- confusionMatrix(predRF, modelTesting$classe)
+predGBM <- predict(modGBM, modelTesting)
+cmGBM <- confusionMatrix(predGBM, modelTesting$classe)
+summaryCM <- data.frame(RF = cmRF$overall, GBM = cmGBM$overall)
+cmRF
+cmGBM
+summaryCM
+```
+
+As seen above, RF presented a better performance.
+
+* Accuracy obtained with Random Forest is 99.08% 
+* And 95% CI is (0.9873, 0.9936)
+
+## Extrapoling to the original testing set
+
+The last step is to replicate to model to the original testing set and upload the results to check with the real data.
+
+```{r}
+predFinal <- predict(modRF, testing)
+predFinal
+```
